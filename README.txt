@@ -1,30 +1,64 @@
-Ninja Gaiden II practice hack
+Ninja Gaiden II practice hack v0.8
+
 ===============================================================================
-Pause Options:
+Status Bar Legend
+
+01
+FRAME-0002 - 0003  n-n p-n
+TIMER-nnn[  ]004|| ||||||||6
+&-nnn/nnn[  0005|| ||||||||7
+
+1 - if set, displays marker indicator (see below) --hex only. anybody care?
+2 - frame count for current level or attempt
+3 - frame count for previous level or attempt
+4 - Ryu's x position on the screen. The bars represent quarter pixels.
+5 - Ryu's x position in the level
+6 - shows an arrow if debug invulnerability is enabled
+7 - shows an arrow if boss refill is enabled
+
+===============================================================================
+Title Screen
+
+Press Start to start the game normally
+Hold Select and press Start to go to the Musicruise sound test
+      (the messed up colors if you do this while the title screen
+       is still loading are the same in the unmodified game.)
+Hold B and press Start to play every cut scene in order
+Hold A and press Start to switch to hexadecimal position displays
+
+===============================================================================
+Pause Options
+
 Hold B and press...
-  R  next lvl  (some odd things may still happen with next/prev)
-  L  prev lvl   If you get glitched graphics on 2-1 or 3-3 just reload with B+down
-  D  redo lvl & fill health (todo: also reset clock?)
-  U  set marker, clear marker if equal (does this feature need more explanation?)
-  Se clear marker
+  Right   next lvl  (some odd things may still happen with next/prev)
+  Left    prev lvl   If you get glitched graphics on 2-1 or 3-3 just reload with B+down
+  Down    redo lvl & fill health (todo: also reset clock?)
+            the above won't the clear level position display like a normal transition
+            if anybody is bothered by that, it could be fixed.
+  Up      set marker, clear marker if equal (see below)
+  Select  clear marker
+
 Hold A and press...
-  R  get scroll (100 cap)
-  L  get clone & fill ninpo
-  D  boss refill toggle
-  U  change weapon & fill ninpo
-  Se debug invuln toggle
+  Right   get scroll (100 cap)
+  Left    get clone & fill ninpo
+  Down    boss refill toggle
+  Up      change weapon & fill ninpo
+  Select  debug invuln toggle
+
 Hold A and B then press Select:
-  force a reload to clear any graphical issues
+  force a GAME OVER reload to clear any graphical issues or other weirdness
   (like after loading a state from an unmodified ROM)
 
 To use the the marker feature, get to a point in a scrolling level past the part
  you want to test, pause, set the marker (B+up) then reload the level with B+down.
- Now once you return to that point the game will automatically pause and
- allow you to see the frame count. You can also save state after reloading the
- level to test and compare strategies for whatever short segment you like.
+ Now once you return to that point (actually, the nearest multiple of 16 pixels)
+ the game will automatically pause and allow you to see the frame count.
+ You can also save state after reloading the level to test and compare strategies 
+ for whatever short segment you like.
  
-Boss refill: this causes boss health to refill when it reaches zero. It was added
- primarily for continuous practice of slashing Jaquio3's belly while dodging shrimp.
+Boss refill: this causes boss health to refill when it reaches zero and resets the
+ frame counter. It was added primarily for continuous practice of slashing Jaquio3's
+ belly while dodging shrimp.
 ===============================================================================
 
 
@@ -103,6 +137,9 @@ Jaq3,       290,  ----,
 Todo:
 DONE  implement marker function
 DONE  implement marker display
-DONE  save xsub/ysub/bgcoll on room change & reload them on B+D (so it's more like loading a state from room entry)
-DONE (sort of) boss pause cut-off & reload after boss dead fix
-NOTDONE add xpos/xsub display
+DONE  save Ryu's state on room change & reload them on B+D (so it's more like loading a state from room entry)
+DONE (just get rid of this entirely) boss pause cut-off & reload after boss dead fix
+DONE  add xpos/xsub display
+DONE  add DECIMAL xpos/xsub display
+DONE  add title screen hex enable option and Tecmo Theater
+any bugs?
