@@ -4,7 +4,7 @@ $0012#input_this_frame#
 $0013#input_new_buttons#
 $0014#input_last_frame#backup
 $0015#nmi_flag#b7 set at end of NMI routine
-$0016#ppu_trans_flag#b7 set when there's stuff at $3F0 to transmit during next NMI, e.g., status bar updates, palette changes
+$0016#ppu_flag#b7 set when there's stuff at $3F0 to transmit during next NMI, e.g., status bar updates, palette changes
 $0017#chr_bank_R0#
 $0018#chr_bank_R1#
 $0019#chr_bank_R2#
@@ -13,7 +13,7 @@ $001B#chr_bank_R4#
 $001C#chr_bank_R5#
 $001D#prg_bank_R6#
 $001E#prg_bank_R7#
-$001F#mmc3_irq_latch#
+$001F#mmc3_irq_latch#next scanline to irq
 $0020#cs_xscroll_adjustment#
 $0021#soft_ppuscroll_x#
 $0022#cs_yscroll_adjustment#
@@ -64,7 +64,7 @@ $0052#pause_flag#b7
 $0053#object_index#
 $0054#crouch_y_offset_0#
 $0055#crouch_y_offset_1#
-$0056#pal_change_flags#
+$0056#pal_change_flags#b4=hud
 $0057#pal_ptr_offset_0#
 $0058#pal_ptr_offset_1#
 $0059#pal_ptr_offset_2#
@@ -120,7 +120,7 @@ $0096#bg_pal_3#
 $0097#sprite_pal_2#
 $0098#sprite_pal_3#
 $0099#univ_bg_color_offset#@ 01:BFF0, all black except for 4-1
-$009B#stage_numbers#b7=sprites behind BG (for 6-1); b6-3=left digit; b2-0=right digit
+$009B#stage_numbers#b7=sprite/BG priority (for 6-1); b6-3=left digit; b2-0=right digit
 $009C#platform#
 $009D#wall_right#
 $009E#wall_left#
@@ -176,16 +176,18 @@ $00D1#music_track#
 $00D2#scroll_get#0x30 after getting scroll from current level, boss kill resets it so dying after killing jaquio1 or jaquio2 allows you to get up to two bonus scrolls for a max maximum of 120 ninpo
 $00D3#highest_boss_passed#
 $00D8#orb_bits#$D8-$EF reserved, though it will never use more than a few bytes
+\3-1 has the most orb spawns at 27, so only 4 bytes to track those bits
 $00E0#title_fade_count#determines which sound test is used
 $00E1#title_fade_timer#
-$0100#shdw_xpos_array#
+$0100#shdw_xpos_array#a trio of 64 bytes ring buffers for the clones
 $0140#shdw_ypos_array#
 $0180#shdw_states_array#
 $01C0#palettes#0x20 bytes
 $01E0#metatiles#6 bytes
 $0300#collision_tiles_0#
 $0378#collision_tiles_1#
-$03F0#ppu_trans#size,ppuaddr,ppuaddr,data ...
+$03F0#ppu_buffer#format: size, ppuaddrhi, ppuaddrlo, data ... , 00 to terminate or start of another string
+\set b7 of size to increment vertically. data left-to-right / top-to-bottom.
 $0440#enemy_bits#$440-$45F
 $0460#animation_id#index into data pointers at $ab70, $ac00
 $0478#animation_timer#
@@ -218,13 +220,6 @@ $0670#enemy_touch_damage#
 $0688#points#
 $0700#sound_buffer#sound effect, music track, or command to initiate next nmi
 $07E9#sound_suspend_flag#0x2B (pause sound effect) sets, 0x2C unsets
-$0009#bgc_tX#
-$000A#bgc_t2#
-$000B#l_coll_d#
-$000C#r_coll_u#
-$000D#r_coll_d#
-$000E#l_coll_u#
-$000F#bgc_temp#
 $003C#_unused#
 $0074#_unused#
 $0075#_unused#
@@ -244,3 +239,61 @@ $00D4#_unused#
 $00D5#_unused#
 $00D6#_unused#
 $00D7#_unused#
+$0000#temp[0]#
+$0001#temp[1]#
+$0002#temp[2]#
+$0003#temp[3]#
+$0004#temp[4]#
+$0005#temp[5]#
+$0006#temp[6]#
+$0007#temp[7]#
+$0008#temp[8]#
+$0009#temp[9]#
+$000A#temp[A]#
+$000B#temp[B]#
+$000C#temp[C]#
+$000D#temp[D]#
+$000E#temp[E]#
+$000F#temp[F]#
+$00FE#_unused#
+$00FF#_unused#
+$00F0#apu[0]#
+$00F1#apu[1]#
+$00F2#apu[2]#
+$00F3#apu[3]#
+$00F4#apu[4]#
+$00F5#apu[5]#
+$00F6#apu[6]#
+$00F7#apu[7]#
+$00F8#apu[8]#
+$00F9#apu[9]#
+$00FA#apu[A]#
+$00FB#apu[B]#
+$00FC#apu[C]#
+$00FD#apu[D]#
+$01E6#S[E6]#
+$01E7#S[E7]#
+$01E8#S[E8]#
+$01E9#S[E9]#
+$01EA#S[EA]#
+$01EB#S[EB]#
+$01EC#S[EC]#
+$01ED#S[ED]#
+$01EE#S[EE]#
+$01EF#S[EF]#
+$01F0#S[F0]#
+$01F1#S[F1]#
+$01F2#S[F2]#
+$01F3#S[F3]#
+$01F4#S[F4]#
+$01F5#S[F5]#
+$01F6#S[F6]#
+$01F7#S[F7]#
+$01F8#S[F8]#
+$01F9#S[F9]#
+$01FA#S[FA]#
+$01FB#S[FB]#
+$01FC#S[FC]#
+$01FD#S[FD]#
+$01FE#S[FE]#
+$01FF#S[FF]#

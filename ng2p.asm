@@ -1,6 +1,6 @@
 // assemble with xkas-plus v14+1
 // https://github.com/devinacker/xkas-plus
-// Ninja Gaiden II - The Dark Sword of Chaos (U) [!] practice hack v0.8-ish
+// Ninja Gaiden II - The Dark Sword of Chaos (U) [!] practice hack v0.8.2
 
 arch nes.cpu
 header
@@ -18,7 +18,7 @@ define sub_wep        $7d ; define max_ninpo      $af ; define tmpF $0f
 define level          $7e ; define cs_play        $cb
 
 define tally_flag     $d0   // $80 = tally timer, $40 = tally ninpo
-define ppu_flag       $16   // $80 = send ppu_buffer to ppu next nmi
+define ppu_flag       $16   // $80 = upload ppu_buffer next nmi
 define scroll_flag    $3e   // $40 = scrolling unlocked
 define boss_fight     $4d   // $10 = true
 define inv            $bf   // debug invulnerability flag. $80 = true
@@ -53,18 +53,21 @@ define updi $a0   // was status_updates_index. unused!
 define fc1  $a1   // 4 bytes. left frame count. duration in frames of current room (was score)
 
 // $dc..$ef are never used during gameplay, but are zeroed at each screen transition
-// so we're free to use them for variables within a level, or just more registers
+// so we're free to use them for vars/regs within a level
 define swrd $ef   // temp variable to track whether boss was killed with sword or up+b
 
 
 // some PRG addresses
 // define lvl_change_info    $8240
+define Palette_update     $94a2
 // define hud_update_old     $96cc   // Y = which update, 0..6 valid (originally)
 define get_weapon         $9810   // A = new weapon, 0..4 valid
-define red_ninpo          $9863
+define red_ninpo          $985e
 define get_scroll         $9876
 define get_clone          $98c9
 define Wait_for_vblank    $9bd9
+define PRGbank8000        $c000   // A=bank to load
+define PRGbankA000        $c011   // A=bank to load
 // define get_block_old      $c739
 define cs_exit            $c74e
 define go_back            $c799
@@ -76,13 +79,16 @@ define nme_alive_swd      $cad1
 define nme_alive_upB      $cb94
 define Boss_kill          $ccba
 define Load_level         $ced2
-define Musicruise         $d76a
+define Musicruise         $d768
 //++
 
 
 bank $01
 //--/////////////////////////////////////////////////////////////////////
 org $a13c                   // unused $5c4 bytes
+
+_7_2_tracks:; db $04,$05,$06,$07,$08,$09,$19,$1e // $08 bytes used
+
 levelskip:; lda #$00        // $bb bytes used
             sta {boss_fight}
             sta {tally_flag}
@@ -149,7 +155,7 @@ Apressed:
 
 .left:;     lsr
             bcc .down
-            jsr {red_ninpo}-5 // get clone, fill ninpo
+            jsr {red_ninpo} // get clone, fill ninpo
             jmp {get_clone}
 
 .down:;     lsr
@@ -171,7 +177,7 @@ Apressed:
             bpl +
 .wrap:;     lda #$00
 +;          jsr {get_weapon}
-            jsr {red_ninpo}
+            jsr {red_ninpo}+5
             lda #$23
             bpl Sound.set
 
@@ -288,7 +294,7 @@ Hud_update:;asl {ppu_flag}  // make sure it's clear in case of interruption
             ldx #$09
             jsr Status_upd
             ldx {ryu_hp}
-            jsr Health_bar  // still using default bar code for now
+            jsr Health_bar  // still using original bar code for now
 
 .nmehp:;    lda {boss_fight}
             beq .done
@@ -441,7 +447,7 @@ Health_bar:;lda #$08        // $1d bytes used
             iny
             dec {tmp8}
             bne -
-            rts             // $26a bytes FREE
+            rts             // $262 bytes FREE
 
 org $a620
 incsrc bin2dec.asm          // $e0 bytes used
@@ -449,19 +455,24 @@ incsrc bin2dec.asm          // $e0 bytes used
 //++
 warnpc $a700+1              // $0 bytes
 
+bank $03
+//--/////////////////////////////////////////////////////////////////////
+org $bf00;  db $36          // status highlight color. original cycle: start at $35, cycle $31..$3c
+//++
+
 
 bank $04
 //--/////////////////////////////////////////////////////////////////////
 
-org $81e2; db $c7,$97,$61   // 1-1c, 1-2, 2-1
-org $81e7; db $42,$41,$a7   // 2-2c, 2-3, 3-1
-org $81ee; db $87,$78       // 3-3e, 3-3
-org $81f2; db $6a           // 4-1c
-org $81f5; db $67,$87       // 4-2c, 4-3
-org $81f8; db $0b,$87       // 5-1b, 5-1c
-org $81fc; db $4b,$70,$a8,$a6,$61,$87,$c1  // 5-2c through 6-3
-org $8207; db $b3           // 7-1e
-org $820c; db $b1,$89,$88,$b5 // 7-2e, 7-3, 7-4, 7-5
+org $81e2;  db $c7,$97,$61  // 1-1c, 1-2, 2-1
+org $81e7;  db $42,$41,$a7  // 2-2c, 2-3, 3-1
+org $81ee;  db $87,$78      // 3-3e, 3-3
+org $81f2;  db $6a          // 4-1c
+org $81f5;  db $67,$87      // 4-2c, 4-3
+org $81f8;  db $0b,$87      // 5-1b, 5-1c
+org $81fc;  db $4b,$70,$a8,$a6,$61,$87,$c1  // 5-2c through 6-3
+org $8207;  db $b3          // 7-1e
+org $820c;  db $b1,$89,$88,$b5 // 7-2e, 7-3, 7-4, 7-5
 
 // Since the above levels aren't normally revisit-able, they weren't
 // assigned spawn positions for Ryu when the revisit flag is set.
@@ -488,8 +499,8 @@ org $820c; db $b1,$89,$88,$b5 // 7-2e, 7-3, 7-4, 7-5
 org $86af                   // unused $71 bytes
 warnpc $8720+1              // $71 bytes FREE
 
-// org $823f; db $00           // disable palette animation for 7-5
-org $946c; ldx #$00         // disable hud shimmer; more time for important stuff!
+// org $823f;  db $00          // disable palette animation for 7-5
+org $946c;  ldx #$00        // disable hud shimmer; more time for important stuff!
 
 // old hud_update was here, made redundant or moved elsewhere
 // 00 clear 2 tiles
@@ -498,7 +509,7 @@ org $946c; ldx #$00         // disable hud shimmer; more time for important stuf
 // 03 boss refill indicator  $91 brpt
 // 04 screen x clr   $3e+ $36+ $0d bytes used = $81
 
-org $96c2;                  // $81 bytes
+org $96c2;                  // freed $81 bytes
 hud_mrk:;  db $1f,$3f,$3f,$3f,$3f,$3f,$5f,$3f
 mrk_offs:; db $01,$80,$06,$06,$00
 // mrkppulo:; db $ff,$23,$7e,$9e,$8f    // oh, just inline these.
@@ -593,79 +604,116 @@ warnpc $9d92+1              // $00 bytes
 
 bank $0c
 //--/////////////////////////////////////////////////////////////////////
-// org $aaaf; db $01           // cut out that awful racket after a boss kill
+// org $aaaf;  db $01          // cut out that awful racket after a boss kill
 //++
 
 
 bank $0e
 //--/////////////////////////////////////////////////////////////////////
-org $c69f; jmp ExitCheck.CS // after score tally, copy & reset fc before cutscene
-org $c71d; jmp ExitCheck    // handle frame counts on level exit (not enough room here)
-                            // $2e bytes FREE
-org $c7b1; ldy #$00         // don't fade out music on stage change (simplest way to deal with level skip messing with music)
-org $c85e; jsr DeathFCU     // copy & reset frame count on death
-org $c888; jsr Hud_update   // jsr to new Hud_update during death loop
-org $cabb; jmp swordKill    // boss kill with sword attack
-org $cba7; jmp upBee        // boss kill with up+b attack
-// org $cd36; jsr $dc37        // enable level select (or 3 bytes FREE) --free for what?
+org $c69f;  jmp ExitCheck.CS// after score tally, copy & reset fc before cutscene
+org $c71d;  jmp ExitCheck   // handle frame counts on level exit (not enough room here)
+                            // freed $2e bytes
+DeathFCU:;  sta {sound_buffer}
+            lda #$01
+            jsr {PRGbankA000}
+            bpl FCUpdate    // $1f bytes used
+LvlExitFCU:;jsr RyuState.S  // save bgoll/state/xsub/ysub
+FCUpdate:;  ldy #$00
+            ldx #$03
+-;          lda {fc1},x
+            sta {fc2},x
+            sty {fc1},x
+            dex
+            bpl -
+            lda #$80
+            sta {fc2T}
+            rts
+
+Transition:;sta {x_speed_hi}// $0e bytes used
+            lda {lvl_width}
+            beq +
+            lda #$40        // only update screen x on entry
+            sta {scfT}      //  if loading a scrolling screen
++;          jmp DoMarks     // $01 byte FREE
+
+
+org $c7b1;  ldy #$00        // don't fade out music on stage change (simplest way to deal with level skip messing with music)
+org $c85e;  jsr DeathFCU    // copy & reset frame count on death
+org $c888;  jsr Hud_update  // jsr to new Hud_update during death loop
+org $cabb;  jmp swordKill   // boss kill with sword attack
+org $cba7;  jmp upBee       // boss kill with up+b attack
+// org $cd36;  jsr $dc37       // enable level select (or 3 bytes FREE) --free for what?
 
 // status template changes
-org $ce5c; db $24,$14,$0a,$10 // SCOR -> FRAM
-org $ce66; db $3f,$18,$3f,$00 // 00_STAGE -> _-_0000__
-           db $00,$00,$00,$3f,$3f
-org $ce97; fill 6, $3f      // erase NINJA
-org $cea8; fill 6, $3f      // erase ENEMY
+table ng2hud.tbl
+org $ce5c;  db "FRAME-0000 - 0000  "
+org $ce97;  fill 6, $3f     // erase NINJA-
+org $cea8;  fill 6, $3f     // erase ENEMY-
 
-org $d034; jsr Transition   // cut in during level load to refresh status indicators and clear screen pos. display
-org $d1b3; jsr ExitCheck.get_block  // this got moved
-org $d734; jsr TitleKeys; nop // handle added title screen inputs
+org $d034;  jsr Transition  // cut in during level load to refresh status indicators and clear screen pos. display
 
-// org $d0eb; bvc $d112       // turn off stage music (for a test)
+org $d0f7;  and #$07        // expand selection of 7-2 music
+            tay
+            lda _7_2_tracks,y
+
+org $d1b3;  jsr ExitCheck.get_block  // this got moved
+org $d734;  jsr TitleKeys; nop // handle added title screen inputs
+org $d768;  pla #2          // 
+
+// org $d0eb;  bvc $d112       // turn off stage music (for a test)
 //++
 
 
 bank $0f
 //--/////////////////////////////////////////////////////////////////////
 // crude slo-mo test. conclusion: it could work, just not quite like this.
-// and would be more effort than it's worth.
-// org $e270; game:; org $e2ea; pause:; org $e26e; hop:; bcs pause
-// org $e248;  lda $c1; and #2; beq hop; lda $12; sta $13; jmp game
+// and it would be more effort than it's worth.
+// org $e270; game:; org $e2ea; pause:; org $e248; 
+// lda $c1; and #2; beq +; lda $12; sta $13; jmp game; +; jmp pause
 
+// org $e254;  nop #2          // enable pausing during score tally
+org $e258;  lda #$26        // change suspend sound to sound effect on pause
+org $e269;  ldx #$00        // change resume sound to no sound
+org $e2da;  jsr IncFrameC   // hijack jsr $953a to do frame counter stuff
+org $e2e0;  jsr PauseOpts   // pause option handler
+            nop             // $07 bytes FREE
 
-// org $e254; nop #2           // enable pausing during score tally
-org $e258; lda #$26         // change suspend sound to sound effect on pause
-org $e269; ldx #$00         // change resume sound to no sound
-org $e2da; jsr IncFrameC    // hijack jsr $953a to do frame counter stuff
-org $e2e0; jsr PauseOpts    // pause option handler
-           nop              // $07 bytes FREE
-org $e309; jsr Hud_update   // way better, man
-org $e31d;                  // unused $12 bytes (in the middle of a jmp table)
+org $e302;  jmp SixThree    // extra check to skip palette updates while paused in 6-3
+org $e309;  jsr Hud_update  // way better, man
+org $e31d;
+SixThree:;  lda {level}     // unused $12 bytes (in the middle of a jmp table)
+            ora {pause_flag}// $0e bytes used
+            cmp #$a2        // the Kelberosses go through their color change regardless of pause state
+            beq +           // but in this hack players are more likely to start the fight paused
+            jsr {Palette_update}
++;          jmp $e305       // so it seems prudent to keep that animation synced with their slumber timer
 
 org $efbd                   // unused $35 bytes
-RyuState:
-.S:;        ldx #$03        // $20 bytes used
--;          ldy .offs,x
-            lda {bg_collision},y
-            sta {bgct},x
-            dex
-            bpl -
-            rts
-.R:;        ldx #$03
--;          ldy .offs,x
-            lda {bgct},x
-            sta {bg_collision},y
-            dex
-            bpl -
-            rts
-.offs:; db $00,$60,$78,$a8
-Transition:;sta {x_speed_hi}// $0e bytes used
-            lda {lvl_width}
-            beq +
-            lda #$40        // only update screen x on entry
-            sta {scfT}      // if loading a scrolling screen
-+;          jmp DoMarks
+// increment frame count at rate of one frame per game frame
+// and check marker if set
+IncFrameC:; jsr $953a       // do hijacked routine
+            ldy {tally_flag}// $18 bytes used
+            bne .done
+            lda #$0a
+            ldx #$00
+-;          inc {fc1},x
+            cmp {fc1},x
+            bne .MarkCheck
+            sty {fc1},x
+            inx
+            cpx #$04
+            bne -
+.MarkCheck:;ldx {mark}      // $12 bytes used
+            beq .done
+            cpx {current_block}
+            bne .done
+            lda #$80
+            sta {pause_flag}
+            lda #$55
+            sta {sound_buffer}
+.done:;     rts
 
-warnpc $eff2+1              // $15 bytes FREE
+warnpc $eff2+1              // $0b bytes FREE
 
 org $f445                   // unused $43 bytes
 ExitCheck:; ldx #$01        // $3c bytes used
@@ -703,53 +751,27 @@ ExitCheck:; ldx #$01        // $3c bytes used
 .Forward:;  jsr LvlExitFCU
             jmp {go_forward}
 
-warnpc $f488+1              // $00 bytes
+warnpc $f488+1              // $07 bytes FREE
 
 
 org $fbbb                   // unused $45 bytes
-// increment frame count at rate of one frame per game frame
-// and check marker if set
-IncFrameC:; jsr $953a       // do hijacked routine
-            ldy {tally_flag}// $18 bytes used
-            bne .done
-            lda #$0a
-            ldx #$00
--;          inc {fc1},x
-            cmp {fc1},x
-            bne .MarkCheck
-            sty {fc1},x
-            inx
-            cpx #$04
-            bne -
-.MarkCheck:;ldx {mark}      // $12 bytes used
-            beq .done
-            cpx {current_block}
-            bne .done
-            lda #$80
-            sta {pause_flag}
-            lda #$55
-            sta {sound_buffer}
-.done:;     rts
-
-DeathFCU:;  sta {sound_buffer}
-            bpl FCUpdate    // $1a bytes used
-LvlExitFCU:;jsr RyuState.S  // save bgoll/state/xsub/ysub
-FCUpdate:;  ldy #$00
-            ldx #$03
--;          lda {fc1},x
-            sta {fc2},x
-            sty {fc1},x
+RyuState:
+.S:;        ldx #$03        // $20 bytes used
+-;          ldy .offs,x
+            lda {bg_collision},y
+            sta {bgct},x
             dex
             bpl -
-            lda #$80
-            sta {fc2T}
             rts
-            nop
+.R:;        ldx #$03
+-;          ldy .offs,x
+            lda {bgct},x
+            sta {bg_collision},y
+            dex
+            bpl -
+            rts
+.offs:; db $00,$60,$78,$a8
 
-warnpc $fc00+1              // $01 byte FREE
-
-
-org $ffd1                   // unused $29 bytes
 // handle boss refiller
 swordKill:; lda #$80        // $25 bytes used
             sta {swrd}
@@ -768,7 +790,11 @@ upBee:;     bit {brpt}
 unset:;     asl {swrd}      // swordKill clear
             jmp {Boss_kill}
 
-warnpc $fffa                // $04 bytes FREE
+warnpc $fc00+1              // $00 bytes
+
+
+org $ffd1                   // unused $29 bytes
+warnpc $fffa                // $29 bytes FREE
 //++
 
 

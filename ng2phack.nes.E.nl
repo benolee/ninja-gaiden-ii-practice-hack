@@ -237,3 +237,9 @@ $DD8B#MCsub2#
 $DDB3#Musicruise_setup#
 $DEA2#Musicruise#
 $DF43#musicruise_data#DF43-E23E, 0x2FC bytes
+\first 0x59 bytes = bank list
+$D60F#Hm#Looks like a crash handler or controller reset would have been here.
+\Instead of the JMP $d618 it might have been:
+\LDA somevar; CMP someval; BNE $03; JMP resetvector
+\this segment isn't in NR2, is fully NOP'd in SW2 and is identical in the prototype rom
+$DF9C#musicruise_tracklist#0x59 bytes

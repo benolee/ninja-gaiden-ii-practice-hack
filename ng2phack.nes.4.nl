@@ -31,7 +31,7 @@ $85F4#0C#sound test and lvl select palettes
 $8618#0D#musicruise 1
 $8620#0E#musicruise 2
 $865A#0F#musicruise 3
-$86AF#unused_0x71_bytes#
+$86AF#unused0x71#
 $8720#orb_spawn_blocks_lo#
 $8750#orb_spawn_blocks_hi#
 $8780#orb_contents_and_ypos_lo#
@@ -81,8 +81,8 @@ $96C2#Update_status_bar#
 $96EB#05_ninja_bar#
 $96F1#06_enemy_bar#
 $9717#0-4_score_lives_maxninpo_ninpo_timer#
-$9743#Fade_from_black#
-$9746#Fade_to_black#
+$9743#Black_fade_A#
+$9746#Fade_from_black#
 $977C#Find_collision_tile#
 $97A8#get_hi_nybble#
 $97AE#get_lo_nybble#
@@ -159,3 +159,4 @@ $9735#hud_upd_ppuAddr_lo#
 $973C#hud_upd_end_offsets#
 $9730#hud_upd_ram_offset#
 $9729#hud_upd_size#
+$974A#Fade_to_black#

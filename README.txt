@@ -23,7 +23,7 @@ Press Start to start the game normally
 Hold Select and press Start to go to the Musicruise sound test
       (the messed up colors if you do this while the title screen
        is still loading are the same in the unmodified game.)
-Hold B and press Start to play every cut scene in order
+Hold B and press Start to play every cutscene in order
 Hold A and press Start to switch to hexadecimal position displays
 
 ===============================================================================
@@ -32,9 +32,7 @@ Pause Options
 Hold B and press...
   Right   next lvl  (some odd things may still happen with next/prev)
   Left    prev lvl   If you get glitched graphics on 2-1 or 3-3 just reload with B+down
-  Down    redo lvl & fill health (todo: also reset clock?)
-            the above won't the clear level position display like a normal transition
-            if anybody is bothered by that, it could be fixed.
+  Down    redo lvl & fill health (todo: also reset TIMER?)
   Up      set marker, clear marker if equal (see below)
   Select  clear marker
 
@@ -55,12 +53,23 @@ To use the the marker feature, get to a point in a scrolling level past the part
  the game will automatically pause and allow you to see the frame count.
  You can also save state after reloading the level to test and compare strategies 
  for whatever short segment you like.
- 
+
 Boss refill: this causes boss health to refill when it reaches zero and resets the
  frame counter. It was added primarily for continuous practice of slashing Jaquio3's
  belly while dodging shrimp.
-===============================================================================
 
+A note on the frame counter: since it updates every frame, it can be trusted to
+ show an accurate time for completing a screen when you touch the exit with 
+ the following exceptions: 3-1, 4-1, 5-1 (the spikes-and-flames parts) and 5-2.
+ Those areas use palette changes to "animate" the backgrounds—which take priority
+ over status updates—so the time shown on exit may be 1 frame (and rarely 2 frames)
+ shy of the actual time. Regardless, the secondary frame count display should
+ always be accurate once it is updated.
+ 7-4 and 7-5 also use palette changes this way, but it doesn't matter since
+ the frame counter stops when the boss is killed.
+
+===============================================================================
+Trivia
 
 "Perfect score" means the frame count if you could go from the start
  of a level to its exit without stopping or slowing down.

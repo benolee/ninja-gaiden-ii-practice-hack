@@ -218,3 +218,4 @@ $FB62#reset#
 $FBBB#unused_0x45_bytes#
 $FC00#PCMdata#
 $FFD1#unused_0x29_bytes#
+$E31D#unused_0x12_bytes#
