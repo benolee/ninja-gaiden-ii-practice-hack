@@ -1,0 +1,20 @@
+$A016#7_2e#
+$A0A6#7_3#
+$A0D6#7_4#
+$A106#7_5#
+$A136#unused_0x5CA_bytes#
+$A700#bg_tile_ptrs_lo#to level layout data @ $8000-A135
+$A730#bg_tile_ptrs_hi#
+$A760#sprjunk0#
+$A830#sprjunk1_lo#AE90-BA38
+$A900#sprjunk1_hi#
+$A9D0#sprjunk2_lo#BA39-BD6A
+$AAA0#sprjunk2_hi#
+$AB70#ani_ptrs_lo#BD6C-BFF2
+$AC00#ani_ptrs_hi#
+$AC90#bgpani_data_ptrs_lo#ACB0-ACCC
+$ACA0#bgpani_data_ptrs_hi#
+$ACB0#bgpani_data#
+$AD10#bg_pal_ptrs_lo#AD50-AE84
+$AD30#bg_pal_ptrs_hi#
+$AD50#bg_pal_data#
