@@ -1,6 +1,6 @@
 // xkas-plus v14+1 May 16, 2015  https://github.com/devinacker/xkas-plus
 
-// Ninja Gaiden II practice hack v0.5
+// Ninja Gaiden II practice hack v0.6
 arch nes.cpu
 header
 banksize $2000
@@ -9,6 +9,9 @@ banksize $2000
 define buttons       $12
 define new_buttons   $13
 define ppu_tran_flag $16
+define scrn_sub      $39
+define scrn_pix      $3a
+define scrn_hi       $3b
 define current_block $40
 define boss_fight    $4d  // $10 = true
 define pause_flag    $52
@@ -24,31 +27,30 @@ define tally_flag    $d0
 
 define ppu_buffer    $03f0
 define bg_collision  $04c0
+define x_pos_hi      $0550
 define x_pos_lo      $0538
 define y_pos_lo      $0568
 define bossHP        $060f
 define sound_buffer  $0700
 
-// stock unused zp: $3C,$74..$7C,$90,$91,$9A,$B3,$B5,$D4..$D7
+// stock unused zp: $3c,$74..$7c,$90,$91,$9a,$b3,$b5,$d4..$d7
 // new or changed variables
 define mark $3c  // block that the game will auto-pause at to display frame count
 define bgct $74  // saves ryu's background collision state on room exit
-define xsbt $75  // saves ryu's x_pos_lo on room exit
-define ysbt $76  // saves ryu's y_pos_lo on room exit
-define mrk0 $77  // marker msd
-define mrk1 $78  // marker lsd
-define ppu0 $79  // ppu addr lo for static markers
-// define x $7a  // 
-// define y $7b  // 
-// define z $7c  // 
+define mrk0 $75  // marker msd
+define mrk1 $76  // marker lsd
+define xpos $0077  // 
 define swrd $90  // temp variable to track whether boss was killed with sword or up+b
 define brpt $91  // boss refill toggle. $80 = true
-define fc1  $a1  // left frame count. duration in frames of current room.
-define fc2  $d4  // right frame count. duration in frames of previous room/attempt
+define ppu0 $9a  // ppu addr lo for static markers
+define fc1  $a1  // 4 bytes. left frame count. duration in frames of current room.
+define xsbt $b3  // saves ryu's x_pos_lo on room exit
+define ysbt $b5  // saves ryu's y_pos_lo on room exit
+define fc2  $d4  // 4 bytes. right frame count. duration in frames of previous room/attempt
 
 // some PRG addresses
 define lvl_transition_info $8240
-define hud_update          $96ce  // Y = which update, 0..6 valid (originally)
+define hud_update          $96cc  // Y = which update, 0..6 valid (originally)
 define get_weapon          $9810  // A = new weapon, 0..4 valid
 define red_ninpo           $9863
 define get_scroll          $9876
@@ -65,15 +67,6 @@ define nme_alive_upB       $cb94
 define Boss_kill           $ccba
 define Load_level          $ced2
 define Musicruise          $d76a
-
-define PAD_A   #$80
-define PAD_B   #$40
-define PAD_SEL #$20
-define PAD_STA #$10
-define PAD_U   #$08
-define PAD_D   #$04
-define PAD_L   #$02
-define PAD_R   #$01
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -95,24 +88,24 @@ PauseOptions:              // assume A = new_buttons here
             bvs Bright
 retA:;      rts
 
-Bright:;    cmp {PAD_R}    // next lvl
-            bne Bleft
-            lda {level}
+Bright:;    lsr
+            bcc Bleft
+            lda {level}    // next lvl
             cmp #$2f       // don't go past 7-5
             bcs retA
             inc {level}
             bpl levelskip
 
-Bleft:;     cmp {PAD_L}    // prev lvl
-            bne Bdown
-            lda {level}
+Bleft:;     lsr
+            bcc Bdown
+            lda {level}    // prev lvl
             beq retA       // and don't go below 1-1a
             dec {level}
             bpl levelskip
 
-Bdown:;     cmp {PAD_D}    // reload lvl & fill hp
-            bne Bup
-            jsr RestoreRyuState
+Bdown:;     lsr
+            bcc Bup
+            jsr RestoreRyuState  // reload lvl & fill hp
             lda #$10
             sta {ryu_hp}
             sta {nme_hp}
@@ -121,17 +114,17 @@ Bdown:;     cmp {PAD_D}    // reload lvl & fill hp
             jsr FCUpdate
             jmp {Load_level}
 
-Bup:;       cmp {PAD_U}    // set marker/clear if equal
-            bne Bselect
-            lda {current_block}
+Bup:;       lsr
+            bcc Bselect
+            lda {current_block}  // set marker/clear if equal
             beq retA
             cmp {mark}
             beq clrMark
             bne setMark
 
-Bselect:;   cmp {PAD_SEL}  // clear marker
-            bne retA
-clrMark:;   lda #$00
+Bselect:;   lsr #2
+            bcc retA
+clrMark:;   lda #$00       // clear marker
 setMark:;   sta {mark}
             php
             ldx #$23
@@ -141,24 +134,26 @@ setMark:;   sta {mark}
             ldy #$03
             bpl hud_upd
 +;          ldy #$00
-            beq setMarker
+            // jsr {HexDisplay}
+            // bmi Hud_Mark
+            beq Hexdisp
 
 
-Aright:;    cmp {PAD_R}    // get scroll (100 cap)
-            bne Aleft
-            lda {max_ninpo}
+Aright:;    lsr
+            bcc Aleft
+            lda {max_ninpo}  // get scroll (100 cap)
             cmp #$64
             bcs retB
             jmp {get_scroll}
 
-Aleft:;     cmp {PAD_L}    // get clone
-            bne Adown
-            jsr {red_ninpo}
+Aleft:;     lsr
+            bcc Adown
+            jsr {red_ninpo}-5  // get clone, fill ninpo
             jmp {get_clone}
 
-Adown:;     cmp {PAD_D}    // boss refill toggle
-            bne Aup
-            lda #$9e
+Adown:;     lsr
+            bcc Aup
+            lda #$9e       // boss refill toggle
             sta {ppu0}
             lda {brpt}
             eor #$80
@@ -171,9 +166,9 @@ Adown:;     cmp {PAD_D}    // boss refill toggle
 bfalse:;    ldy #$03
 +;          bpl hud_upd
 
-Aup:;       cmp {PAD_U}    // change weapon, fill ninpo
-            bne ABSelect
-            ldx {sub_wep}
+Aup:;       lsr
+            bcc ABSelect
+            ldx {sub_wep}  // change weapon, fill ninpo
             cpx #$04
             beq z
             inx
@@ -185,15 +180,15 @@ z:;         lda #$00
             lda #$23
             bpl sound
 
-ABSelect:;  bit {buttons}  // try and fix buggy level or state load
+ABSelect:;  bit {buttons}
             bvc Aselect
-            cmp {PAD_SEL}
-            bne retB
-            jmp {game_over_reload}
+            lsr #2
+            bcc retB
+            jmp {game_over_reload}  // try and fix buggy level or state load
 
-Aselect:;   cmp {PAD_SEL}  // toggle invulnerability
-            bne retB
-            lda #$7e
+Aselect:;   lsr #2
+            bcc retB
+            lda #$7e       // toggle invulnerability
             sta {ppu0}
             lda {inv}
             eor #$80
@@ -210,7 +205,8 @@ soundB:;    lda #$21
 sound:;     sta {sound_buffer}
 retB:;      rts
 
-setMarker:; tax
+
+Hexdisp:;   tax
             and #$0f
             cmp #$0b
             bcc +
@@ -222,12 +218,12 @@ setMarker:; tax
             bcc +
             adc #$36
 +;          sta {mrk1}
-clear:;     
-            ldy #$00
+            cpy #$00
+            beq Hud_Mark
+            rts
 
 Hud_Mark:;  lda #$23
             sta $03f1           // ppu addr hi
-
             lda {ppu0}
             sta $03f2           // ppu addr lo
 
@@ -245,31 +241,32 @@ Hud_Mark:;  lda #$23
             lda {mrk1}
             sta $03f3
             bpl +
+            // bmi done
 static:;    tay
 -;          lda hud_mark,x
             sta $03f2,y         // ppu data
-            inx ; dey
+            inx; dey
             bne -
 +;          lda #$80
             sta {ppu_tran_flag}
-            rts
+done:;      rts
 
 // 00 marker indicator       $3c mark, $77,$78
 // 01 invuln. indicator      $bf inv
 // 02 boss refill indicator  $91 brpt
 // 03 clear
-           //  00  01  02  03  04  05
+
 hud_mark:; db $3f,$3f,$5f,$5f
+           //  00  01  02  03  04  05
 hudsize0:; db $02,$01,$01,$02,$00,$00
 hud_offs:; db $ff,$02,$03,$00,$00,$00
 hud_end0:; db $05,$04,$04,$05,$00,$00
 // hud_ppu0:; db $23,$7e,$9e,$00,$00,$00
 
-
-DoMarks:;   ldx {mark}
-            beq +
-            lda #$23
-            ldy #$00
+DoMarks:;   ldx {mark}     // if invuln/boss-refill/marker are set
+            beq +          // and a game over or cutscene happens
+            lda #$23       // this will keep their hud indicators
+            ldy #$00       // from getting erased.
             jsr do1
 +;          ldx {inv}
             beq +
@@ -280,49 +277,90 @@ DoMarks:;   ldx {mark}
             beq +
             lda #$9e
             ldy #$02
-            jsr do1
-+;          rts
 do1:;       sta {ppu0}
             jsr Hud_Mark
             jsr {Wait_for_vblank}
++;          rts
+
+
+HexdispL:;  lda {x_pos_lo}
+            ldy #$00
+            beq HexdispB
+HexdispH:;  lda {x_pos_hi}
+HexdispB:;  tax
+            and #$0f
+            cmp #$0b
+            bcc +
+            adc #$36
++;          sta {xpos},y
+            txa
+            iny
+            lsr #4
+            cmp #$0b
+            bcc +
+            adc #$36
++;          sta {xpos},y
+            iny
+            lda {ppu_buffer}
             rts
+
+
 /////////////////////////////////////////////////////////////////////////////////////
 bank $04
+// 00 fc1
+// 01 fc2
+// 02 max ninpo
+// 03 ninpo
+// 04 level timer
+// 05 screen x
+// 06 ryu x
+// 07 player bar
+// 08 enemy bar
 
-// 00 player bar
-// 01 enemy bar
-// 02 fc1
-// 03 fc2
-// 04 max ninpo
-// 05 ninpo
-// 06 level timer
-// 07 marker indicator
-// 08 invuln. indicator
-// 09 boss refill indicator
-// 0A..0C ??
+org $86af  // relocated hud update data to make room for more things
+           // 00  01  02  03  04  05  06  07  08  09  0a  0b  0c
+hudsize:; db $04,$04,$02,$03,$03,$04,$04,$08,$08
+hud_ram:; db $00,$33,$05,$07,$0a,$d6,$d6, // 2 bytes fewer: hp bars don't use this.
+hud_ppu:; db $49,$50,$89,$85,$69,$90,$70,$76,$96
+hud_end:; db $07,$07,$05,$06,$06,$07,$07,$0b,$0b
 
-// org $86af  // relocated hud update data to make room for more things
-              // 00  01  02  03  04  05  06  07  08  09  0a  0b  0c
-// hudsize:; db $08,$08,$04,$04,$02,$03,$03,$02,$01,$01,$00,$00,$00
-// hud_ram:; db $00,$00,$00,$33,$05,$07,$0A,$d8,$d6,$d7,$00  // 2 bytes smaller: hp bars don't use this.
-// org $9729  // may as well fill up these 26 bytes instead of moving it all
-// hud_ppu:; db $76,$96,$49,$50,$89,$85,$69,$23,$7e,$9e,$00,$00,$00
-// hud_end:; db $0B,$0B,$07,$07,$05,$06,$06,$05,$04,$04,$00,$00,$00
 
-// org $96c8; ldy #$06  // 
-// org $96d3; lda hud_ppu,y
-// org $96d9; ldx hud_end,y
-// org $96e1; lda hudsize,y
-// org $96e7; cpy #$02; bcs $9717
-// org $9717; ldx hud_ram,y
+org $96c8; ldy #$08        // 
+org $96d3; lda hud_ppu,y
+org $96d9; ldx hud_end,y
+org $96e1; lda hudsize,y
+org $96e7; cpy #$05
+           bcs Xdisplay
+           bcc nums
+bars:;     cpy #$08
+org $9717
+nums:;     ldx hud_ram,y
+
+org $9729
+Xdisplay:; cpy #$06
+           bcc screenx
+           ldx {ryu_hp}
+           cpy #$07
+           bcs bars
+ryux:;     jsr HexdispL
+           jsr HexdispH
+           ldy #$06
+           bpl nums
+screenx:;  rts
 
 // change lives hud updates to 2nd frame counter
-org $972a; db $04      // character count to transmit
-org $9731; db $33      // RAM offset from $a1
-org $9736; db $50      // ppu_addr_lo
-org $973d; db $07      // update size (offset to write 0 byte to terminate)
+// don't need this anymore
+// org $972a; db $04         // character count to transmit
+// org $9731; db $33         // RAM offset from $a1
+// org $9736; db $50         // ppu_addr_lo
+// org $973d; db $07         // update size (offset to write 0 byte to terminate)
 
-org $9d68; db $60,$ea  // RTS and NOP from Add_points  (this gets jumped to a lot)
+org $9d68; db $60,$ea     // RTS and NOP from Add_points  (this gets jumped to a lot)
+
+
+/////////////////////////////////////////////////////////////////////////////////////
+bank $0c
+org $aaaf; db $01         // cut out that awful racket after a boss kill
 
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -333,9 +371,12 @@ org $c7b2; db $00         // don't fade out music on stage change (simplest way 
 org $c85e; jsr DeathFCU   // copy & reset frame count on death
 org $cabb; jmp swordKill  // boss kill with sword attack
 org $cba7; jmp upBee      // boss kill with up+b attack
+// org $cd36; jsr $dc37      // enable level select
 org $ce3e; jsr $e31e      // hijack jsr $9903 for hud marker handling after gameover or cutscene
 org $ce5c; db $24,$14,$0a,$10                      // SCOR -> FRAM
 org $ce66; db $3f,$18,$3f,$00,$00,$00,$00,$3f,$3f  // 00_STAGE -> _-_0000__
+org $ce97; fill 6, $3f    // erase NINJA
+org $cea8; fill 6, $3f    // erase ENEMY
 org $d734; cmp #$30  // change sound test to Select+Start and go directly to Musicruise
            beq {Musicruise}
 
@@ -347,13 +388,13 @@ org $e258; lda #$26  // change suspend sound to sound effect on pause
 org $e269; ldx #$00  // change resume sound to no sound
 org $e2da; jsr IncFrameCount  // hijack jsr $953a to do frame counter stuff
 org $e2e0; jsr PauseOptions; nop  // pause option handler
-org $e31e; jsr $9903    // indirect hijack because we need to bankswitch first
-           jsr DoMarks  // and into object pointer table... spooky.
+org $e31e; jsr $9903 // indirect hijack because we need to bankswitch first
+           jsr DoMarks
            rts
 
 org $efbd                  // rom 1efcd  pc 0f:efbd
 SaveRyuState:
-            lda {bg_collision}
+            lda {bg_collision}  // oops, forgot slow-mode
             sta {bgct}
             lda {x_pos_lo}
             sta {xsbt}
@@ -425,7 +466,7 @@ IncFrameCount:
 reta:;      rts
 
 LvlExitFCU:
-            ldy #$02
+            ldy #$00
             jsr {hud_update}
             jsr SaveRyuState  // save xsub/ysub/bgoll
             jsr FCUpdate
@@ -449,7 +490,7 @@ warnpc $fc00+1
 
 
 org $ffd1                  // rom 1ffe1 pc 0f:ffd1
-swordKill:; lda #$80       // replace this with: sec; ror {swrd} ? no.
+swordKill:; lda #$80
             sta {swrd}
 upBee:;     bit {brpt}
             bpl unset
@@ -466,3 +507,19 @@ upBee:;     bit {brpt}
 unset:;     asl {swrd}     // swordKill clear
             jmp {Boss_kill}
 warnpc $fffa
+
+
+// CHR ROM //////////////////////////////////////////////////////////////////////////
+arch none
+org $20010+$410
+db $ff,$ff,$ff,$ff,$9c,$80,$9c,$9c,$ff,$e3,$c9,$9c,$ff,$ff,$ff,$ff // A tile $41
+db $ff,$ff,$ff,$ff,$81,$9c,$9c,$81,$ff,$81,$9c,$9c,$ff,$ff,$ff,$ff // B
+db $ff,$ff,$ff,$ff,$9f,$9f,$c8,$e1,$ff,$e1,$c8,$9f,$ff,$ff,$ff,$ff // C
+// db $ff,$ff,$ff,$ff,$9f,$9f,$cc,$e1,$ff,$e1,$cc,$9f,$ff,$ff,$ff,$ff // C, skinny
+db $ff,$ff,$ff,$ff,$9c,$9c,$99,$83,$ff,$83,$99,$9c,$ff,$ff,$ff,$ff // D
+db $ff,$ff,$ff,$ff,$81,$9f,$9f,$80,$ff,$80,$9f,$9f,$ff,$ff,$ff,$ff // E
+db $ff,$ff,$ff,$ff,$81,$9f,$9f,$9f,$ff,$80,$9f,$9f,$ff,$ff,$ff,$ff // F
+
+org $20010+$5f0
+db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$f7,$f3,$01,$f3,$f7,$ff // arrow
+// db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$f7,$f3,$01,$f3,$f7,$ff,$ff // arrow, pixel higher

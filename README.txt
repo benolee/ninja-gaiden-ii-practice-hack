@@ -22,6 +22,9 @@ To use the the marker feature, get to a point in a scrolling level past the part
  Now once you return to that point the game will automatically pause and
  allow you to see the frame count. You can also save state after reloading the
  level to test and compare strategies for whatever short segment you like.
+ 
+Boss refill: this causes boss health to refill when it reaches zero. It was added
+ primarily for continuous practice of slashing Jaquio3's belly while dodging shrimp.
 ===============================================================================
 
 
@@ -102,4 +105,4 @@ DONE  implement marker function
 DONE  implement marker display
 DONE  save xsub/ysub/bgcoll on room change & reload them on B+D (so it's more like loading a state from room entry)
 DONE (sort of) boss pause cut-off & reload after boss dead fix
-add xpos/xsub display
+NOTDONE add xpos/xsub display
